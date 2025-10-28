@@ -1,14 +1,14 @@
 [project]
-name = "nekro-plugin-template"
-version = "2.0.0"
-description = "NekroAgent 插件模板"
+name = "nekro-plugin-block"
+version = "1.0.0"
+description = "NekroAgent 用户屏蔽管理插件"
 authors = [{ name = "KroMiose", email = "li_xiangff@163.com" }]
 readme = "README.md"
 requires-python = ">=3.10,<3.12"
 dependencies = ["nekro-agent>=2.0.0"]
 
 [project.urls]
-Repository = "https://github.com/KroMiose/nekro-plugin-template"
+Repository = "https://github.com/KroMiose/nekro-plugin-block"
 
 
 [build-system]
@@ -68,3 +68,4 @@ select = [
     "TRY",
     "RUF",
 ]
+
