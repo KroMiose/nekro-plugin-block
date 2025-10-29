@@ -1,101 +1,61 @@
-# NekroAgent 插件模板
+# 用户屏蔽管理插件 (User Block Manager)
 
-> 一个帮助开发者快速创建 NekroAgent 插件的模板仓库。
+AI 自主管理用户屏蔽的插件，支持两种屏蔽模式。
 
-## 🚀 快速开始
+## 主要功能
 
-### 1. 使用模板创建仓库
+### 两种屏蔽模式
 
-1. 点击本仓库页面上的 "Use this template" 按钮
-2. 输入你的插件仓库名称，推荐命名格式：`nekro-plugin-[你的插件包名]`
-3. 选择公开或私有仓库
-4. 点击 "Create repository from template" 创建你的插件仓库
+1. **禁止触发模式 (Prevent Trigger)**
 
-### 2. 克隆你的插件仓库
+   - 被屏蔽用户的消息 AI 仍然可见
+   - 该用户无法直接唤醒 AI
+   - 当 AI 被其他触发条件唤醒时，仍能看到该用户的消息
+   - 适用场景：用户频繁 @AI 或刷屏，但 AI 仍想保留观察权
 
-```bash
-git clone https://github.com/你的用户名/你的插件仓库名.git
-cd 你的插件仓库名
-```
+2. **完全屏蔽模式 (Full Block)**
+   - AI 完全看不到被屏蔽用户的消息
+   - 就像该用户不存在一样
+   - 适用场景：用户严重违规、恶意骚扰，或 AI 完全不想看到其消息
 
-### 3. 安装依赖
+### 核心功能
 
-```bash
-# 安装 uv 包管理工具
-curl -LsSf https://astral.sh/uv/install.sh | sh
+- **精确的屏蔽时长**: 支持秒级自定义屏蔽时长，AI 可自行计算时长
+- **永久屏蔽**: 可配置是否允许 AI 设置永久屏蔽
+- **自动到期**: 屏蔽时间到期后自动解除
+- **状态展示**: 在 AI 的系统提示词中显示当前屏蔽的用户列表
+- **灵活查询**: AI 可以查看已屏蔽用户的详细信息和剩余时间
 
-# 根据指引安装 uv 后打开新的终端检查 uv 是否安装成功
-uv --version
+## 配置说明
 
-# 同步安装所有依赖（自动创建虚拟环境）
-uv sync
-```
+- **启用禁止触发功能**: 是否允许 AI 使用禁止触发模式
+- **启用完全屏蔽功能**: 是否允许 AI 使用完全屏蔽模式
+- **最大屏蔽时长（秒）**: 单次屏蔽的最大秒数限制（默认 259200 秒=72 小时）
+- **默认屏蔽时长（秒）**: AI 未指定时长时使用的默认值（默认 86400 秒=24 小时）
+- **允许永久屏蔽**: 是否允许 AI 设置永久屏蔽
+- **提示词中显示**: 是否在 AI 提示词中显示屏蔽用户
 
-## 📝 插件开发指南
+**注意**: 系统会在屏蔽时间到期后自动解除，无需额外配置。
 
-### 插件结构
+## 代码使用示例
 
-一个标准的 NekroAgent 插件需要在 `__init__.py` 中提供一个 `plugin` 实例，这是插件的核心，用于注册插件功能和配置。
-
-```python
-# 示例插件结构
-plugin = NekroPlugin(
-    name="你的插件名称",  # 插件显示名称
-    module_name="plugin_module_name",  # 插件模块名 (在NekroAI社区需唯一)
-    description="插件描述",  # 插件功能简介
-    version="1.0.0",  # 插件版本
-    author="你的名字",  # 作者信息
-    url="https://github.com/你的用户名/你的插件仓库名",  # 插件仓库链接
-)
-```
-
-### 开发功能
-
-1. **配置插件参数**：使用 `@plugin.mount_config()` 装饰器创建可配置参数
+AI 会通过代码调用这些方法：
 
 ```python
-@plugin.mount_config()
-class MyPluginConfig(ConfigBase):
-    """插件配置说明"""
+# 屏蔽用户1小时（3600秒）
+block_user_prevent_trigger("12345678", "频繁刷屏", 3600)
 
-    API_KEY: str = Field(
-        default="",
-        title="API密钥",
-        description="第三方服务的API密钥",
-    )
+# 屏蔽用户24小时（86400秒）
+block_user_full("12345678", "发送违规内容", 86400)
+
+# 查看已屏蔽的用户
+list_blocked_users()
+
+# 解除屏蔽
+unblock_user("12345678")
 ```
 
-2. **添加沙盒方法**：使用 `@plugin.mount_sandbox_method()` 添加 AI 可调用的函数
+## 注意事项
 
-```python
-@plugin.mount_sandbox_method(SandboxMethodType.AGENT, name="函数名称", description="函数功能描述")
-async def my_function(_ctx: AgentCtx, param1: str) -> str:
-    """实现插件功能的具体逻辑"""
-    return f"处理结果: {param1}"
-```
-
-3. **资源清理**：使用 `@plugin.mount_cleanup_method()` 添加资源清理函数
-
-```python
-@plugin.mount_cleanup_method()
-async def clean_up():
-    """清理资源，如数据库连接等"""
-    logger.info("资源已清理")
-```
-
-## 📦 插件发布
-
-完成开发后，你可以：
-
-1. 提交到 GitHub 仓库
-2. 发布到 NekroAI 云社区共享给所有用户
-
-## 🔍 更多资源
-
-- [NekroAgent 官方文档](https://doc.nekro.ai/)
-- [插件开发详细指南](https://doc.nekro.ai/docs/04_plugin_dev/intro.html)
-- [社区交流群](https://qm.qq.com/q/hJlRwD17Ae)：636925153
-
-## 📄 许可证
-
-MIT
+- 屏蔽操作会直接作用到系统的用户控制层面
+- 建议配置合理的最大屏蔽时长，避免 AI 过度使用
