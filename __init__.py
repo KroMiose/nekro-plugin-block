@@ -69,18 +69,18 @@ unblock_user("12345678")
 
 ## 注意事项
 
-- AI自主决定屏蔽操作，是针对特定聊天环境的自我保护机制
+- AI自主决定屏蔽操作，这是AI的自我保护机制
+- **屏蔽范围**：对当前平台适配器的所有会话生效（如 QQ 群、私聊等所有 QQ 场景）
 - 屏蔽操作会直接作用到系统的用户控制层面
 - 建议配置合理的最大屏蔽时长，避免AI过度使用
 - 永久屏蔽功能建议谨慎开启
-- AI会在生成代码时自行计算时长（秒数），便于精确控制
 """
 
 from .methods import (
     block_user_full,
     block_user_prevent_trigger,
     cleanup,
-    inject_blocked_users_prompt,
+    inject_block_status_prompt,
     list_blocked_users,
     unblock_user,
 )

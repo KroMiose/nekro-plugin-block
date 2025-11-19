@@ -317,43 +317,64 @@ async def list_blocked_users(_ctx: AgentCtx) -> str:
     return "\n".join(lines)
 
 
-@plugin.mount_prompt_inject_method("blocked_users_status")
-async def inject_blocked_users_prompt(_ctx: AgentCtx) -> str:
-    """注入已屏蔽用户状态到提示词"""
+@plugin.mount_prompt_inject_method("block_plugin_status")
+async def inject_block_status_prompt(_ctx: AgentCtx) -> str:
+    """注入屏蔽插件状态到提示词"""
     try:
-        if not config.SHOW_BLOCKED_USERS_IN_PROMPT:
-            return ""
+        prompt_parts = []
 
-        block_data = await get_block_data(_ctx.chat_key)
+        # 1. 注入插件配置状态
+        config_lines = ["User Block Plugin Configuration:"]
 
-        # 清理过期的插件记录
-        # 注意：系统层面的屏蔽会在到期时由DBUser自动解除
-        current_time = int(time.time())
-        block_data.cleanup_expired(current_time)
-        await save_block_data(_ctx.chat_key, block_data)
+        # 功能开关状态
+        if config.ENABLE_PREVENT_TRIGGER:
+            config_lines.append("  - Prevent Trigger Mode: Enabled")
+        if config.ENABLE_FULL_BLOCK:
+            config_lines.append("  - Full Block Mode: Enabled")
 
-        # 获取有效屏蔽记录
-        current_time = int(time.time())
-        active_blocks = block_data.get_active_blocks(current_time)
+        # 永久屏蔽权限
+        if config.ALLOW_PERMANENT_BLOCK:
+            config_lines.append("  - Permanent Block: Allowed")
+        else:
+            config_lines.append("  - Permanent Block: Not Allowed (use time-limited blocks only)")
 
-        if not active_blocks:
-            return ""
+        # 时长限制
+        max_hours = config.MAX_BLOCK_SECONDS // 3600
+        default_hours = config.DEFAULT_BLOCK_SECONDS // 3600
+        config_lines.append(f"  - Max Duration: {max_hours}h, Default: {default_hours}h")
 
-        # 限制显示数量
-        display_count = min(len(active_blocks), config.MAX_PROMPT_DISPLAY_COUNT)
-        display_blocks = list(active_blocks.items())[:display_count]
+        prompt_parts.append("\n".join(config_lines))
 
-        # 构建简洁的提示词
-        lines = ["Current Blocked Users:"]
-        for _user_id, record in display_blocks:
-            time_desc = "∞" if record.is_permanent else format_time_remaining(record.expire_time)
-            block_symbol = "🚫" if record.block_type == BlockType.FULL_BLOCK else "🔇"
-            lines.append(f"  {block_symbol} {record.username} ({time_desc}) - {record.reason}")
+        # 2. 注入已屏蔽用户列表
+        if config.SHOW_BLOCKED_USERS_IN_PROMPT:
+            block_data = await get_block_data(_ctx.chat_key)
 
-        if len(active_blocks) > display_count:
-            lines.append(f"  ... and {len(active_blocks) - display_count} more")
+            # 清理过期的插件记录
+            current_time = int(time.time())
+            block_data.cleanup_expired(current_time)
+            await save_block_data(_ctx.chat_key, block_data)
 
-        return "\n".join(lines)
+            # 获取有效屏蔽记录
+            active_blocks = block_data.get_active_blocks(current_time)
+
+            if active_blocks:
+                # 限制显示数量
+                display_count = min(len(active_blocks), config.MAX_PROMPT_DISPLAY_COUNT)
+                display_blocks = list(active_blocks.items())[:display_count]
+
+                # 构建屏蔽用户列表
+                block_lines = ["Currently Blocked Users:"]
+                for _user_id, record in display_blocks:
+                    time_desc = "∞" if record.is_permanent else format_time_remaining(record.expire_time)
+                    block_symbol = "🚫" if record.block_type == BlockType.FULL_BLOCK else "🔇"
+                    block_lines.append(f"  {block_symbol} {record.username} ({time_desc}) - {record.reason}")
+
+                if len(active_blocks) > display_count:
+                    block_lines.append(f"  ... and {len(active_blocks) - display_count} more")
+
+                prompt_parts.append("\n".join(block_lines))
+
+        return "\n\n".join(prompt_parts) if prompt_parts else ""
 
     except Exception as e:
         core.logger.warning(f"[屏蔽插件] 提示词注入失败: {e}")
